@@ -3,7 +3,7 @@ import os
 import pdb
 import sys
 import numpy as np
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, interp1d
 try:
     import ROOT as root
 except ImportError:
@@ -268,6 +268,13 @@ def dark_hits(nX, timeX, dark_noise):
 
 def geometric(points, c_values, ev_vertex):
     vinterp = griddata(points, c_values, ev_vertex, method="linear")
+    correction = 1. / vinterp
+    return correction
+
+def geometric1D(points, c_values, ev_vertex):
+    finterp = interp1d(points, c_values)
+    rz_vertex = xyz_to_rz(ev_vertex)
+    vinterp = finterp(rz_vertex[0])
     correction = 1. / vinterp
     return correction
 

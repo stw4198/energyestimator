@@ -4,6 +4,7 @@ import pdb
 import sys
 import numpy as np
 from scipy.interpolate import griddata, interp1d
+from tqdm import tqdm
 try:
     import ROOT as root
 except ImportError:
@@ -81,7 +82,11 @@ class Estimator():
         self.rat_rt = self.rat_file.Get("runT")
         self.bonsai_t = self.bonsai_file.Get("data")
         self.bonsai_rt = self.bonsai_file.Get("runSummary")
-        self.rat_rt.GetEntry(0)
+        try:
+            self.rat_rt.GetEntry(0)
+        except AttributeError:
+            print(f"Error getting rat run tree from file {self.rat_fn}.")
+            exit(1)
         self.pmtinfo = self.rat_rt.run.GetPMTInfo()
 
     def calculate_pmt_separation(self, buffer=50):
@@ -99,10 +104,11 @@ class Estimator():
     def eventloop(self, write_tree=True):
         r_nentry = self.rat_t.GetEntries()
         b_nentry = self.bonsai_t.GetEntries()
+        geo_data = self.parse_geometric_corrections("geo_correction.csv")
         final_row, max_height = calculate_final_row_height(self.pmtinfo)
         nXeff_values = []
         print(f"There are {b_nentry} reconstructed events in {self.bonsai_fn}")
-        for b_entry, b_event in enumerate(self.bonsai_t):
+        for b_entry, b_event in enumerate(tqdm(self.bonsai_t, total=b_nentry)):
             self.rat_t.GetEntry(b_event.mcid)
             evcount = self.rat_t.ds.GetEVCount()
             if evcount == 0:
@@ -133,7 +139,7 @@ class Estimator():
                     multihit_cor = new_occupancy(nXPMTpos, hit, self.pmt_sep, row_height=final_row, roof_height=max_height)
                     late_cor = tail_hits(nX, n2X, self.window, self.dark_noise)
                     dark_cor = dark_hits(nX, self.window, self.dark_noise)
-                    geo_cor = 1 #geometric(points, values, xyz_to_rz(reco_vertex))[0]
+                    geo_cor = geometric1D(geo_data[:,0], geo_data[:,1], reco_vertex)
                     transp_cor = transparency(nXPMTpos[hit], reco_vertex, self.transparency)
                     qe_cor = quantum_efficiency(self.qe)
                     nXeff += (multihit_cor + late_cor - dark_cor) * transp_cor * geo_cor * qe_cor
@@ -155,6 +161,25 @@ class Estimator():
             nXeff_value[0] = value
             branch.Fill()
         self.bonsai_file.Write("", root.TFile.kOverwrite)
+
+    @staticmethod
+    def parse_geometric_corrections(filename):
+        data = np.loadtxt(filename, skiprows=1, delimiter=",")
+        return data
+
+    def make_fit(self, estimator, conditions):
+        self.bonsai_t.Draw("mc_energy:"+estimator+">>hist", conditions, "goff")
+        hist = root.gDirectory.Get("hist")
+        hist.Fit("pol1", "goff")
+        p0 = hist.GetFunction("pol1").GetParameter(0)
+        p1 = hist.GetFunction("pol1").GetParameter(1)
+        fit = (p0, p1)
+        return fit
+
+    @staticmethod
+    def estimate_energy(nXeff, fit):
+        estimate = fit[0] + (fit[1] * nXeff)
+        return estimate
 
 def correct_tof(vertex, pmtinfo, evPMTs, SoL=218):
     """Correct PMT hit times for photon time of flight.
@@ -274,8 +299,11 @@ def geometric(points, c_values, ev_vertex):
 def geometric1D(points, c_values, ev_vertex):
     finterp = interp1d(points, c_values)
     rz_vertex = xyz_to_rz(ev_vertex)
-    vinterp = finterp(rz_vertex[0])
-    correction = 1. / vinterp
+    try:
+        correction = finterp(rz_vertex[0])
+    except ValueError:
+        # Vertex was probably beyond PSUP
+        correction = 1.
     return correction
 
 def transparency(pmt_pos, ev_vertex, att_length):

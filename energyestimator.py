@@ -18,6 +18,7 @@ except ImportError:
 
 np.set_printoptions(suppress=True)
 
+
 class Estimator():
 
     def __init__(self, rat_fn=None, bonsai_fn=None, min_t=-3, max_t=6,
@@ -31,11 +32,10 @@ class Estimator():
         self.medium = medium
         self.geometry = geometry
         self.fitter = fitter
-        self.media_optics = {
-            "water" : 117509,
-            "wbls1pct" : 145312,
-            "wbls3pct" : 135169,
-            "wbls5pct" : 126889}
+        self.media_optics = {"water": 117509,
+                             "wbls1pct": 145312,
+                             "wbls3pct": 135169,
+                             "wbls5pct": 126889}
         self.pmt_sep = pmt_sep
         self.dark_noise = dark_noise
         self.qe = qe
@@ -212,6 +212,7 @@ class Estimator():
         if isinstance(estimate, np.ndarray):
             estimate[estimate<0] = -9999.9
         return estimate
+
 
 def correct_tof(vertex, pmtinfo, evPMTs, SoL=218):
     """Correct PMT hit times for photon time of flight.

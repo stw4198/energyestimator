@@ -86,6 +86,7 @@ class Estimator():
         self.dark_noise = args.darkNoise
         self.qe = args.qe
         self.pmt_sep = args.pmtSep
+        self.fitter = args.fitter
         self.transparency = self.media_optics[self.medium]
         self.get_file_data()
         if self.pmt_sep == 0: self.pmt_sep = self.calculate_pmt_separation()

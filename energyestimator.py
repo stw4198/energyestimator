@@ -117,13 +117,14 @@ class Estimator():
         print(f"Setting PMT separation to {pmt_separation + buffer}.")
         return pmt_separation + buffer
 
-    def eventloop(self, write_tree=True, fitter='bonsai'):
+    def eventloop(self, write_tree=True):#, fitter='bonsai'):
         r_nentry = self.rat_t.GetEntries()
         b_nentry = self.bonsai_t.GetEntries()
         geo_data = self.parse_geometric_corrections("geo_correction.csv")
         final_row, max_height = calculate_final_row_height(self.pmtinfo)
         nXeff_values = []
         nX_values = []
+        fitter = self.fitter
         print(f"There are {b_nentry} reconstructed events in {self.bonsai_fn}")
         for b_entry, b_event in enumerate(tqdm(self.bonsai_t, total=b_nentry)):
             self.rat_t.GetEntry(b_event.mcid)

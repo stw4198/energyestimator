@@ -118,14 +118,13 @@ class Estimator():
         print(f"Setting PMT separation to {pmt_separation + buffer}.")
         return pmt_separation + buffer
 
-    def eventloop(self, write_tree=True):#, fitter='bonsai'):
+    def eventloop(self, write_tree=True):
         r_nentry = self.rat_t.GetEntries()
         b_nentry = self.bonsai_t.GetEntries()
         geo_data = self.parse_geometric_corrections("geo_correction.csv")
         final_row, max_height = calculate_final_row_height(self.pmtinfo)
         nXeff_values = []
         nX_values = []
-        fitter = self.fitter
         print(f"There are {b_nentry} reconstructed events in {self.bonsai_fn}")
         for b_entry, b_event in enumerate(tqdm(self.bonsai_t, total=b_nentry)):
             self.rat_t.GetEntry(b_event.mcid)
@@ -137,9 +136,9 @@ class Estimator():
                 if ev_idx != b_event.subid:
                     continue
                 assert b_event.mcx == self.rat_t.ds.GetMC().GetMCParticle(0).GetPosition().X()
-                if fitter == 'qfit':
+                if self.fitter == 'qfit':
                     reco_vertex = np.array([b_event.xQFit, b_event.yQFit, b_event.zQFit])
-                elif fitter == 'MC':
+                elif self.fitter == 'MC':
                     reco_vertex = np.array([b_event.mcx, b_event.mcy, b_event.mcz])
                 else:
                     reco_vertex = np.array([b_event.x, b_event.y, b_event.z])

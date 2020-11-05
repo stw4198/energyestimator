@@ -69,7 +69,7 @@ class Estimator():
                             diagonal separation, set to 0 to calculate dynamically \
                             (default: 750)", type=float, default=750.)
         parser.add_argument("--fitter", help="specify which fitter to analyse: \
-                            bonsai or qfit \
+                            bonsai, qfit or MC \
                             (default: bonsai)", type=str, default='bonsai')
         args = parser.parse_args(argv)
         if self.load_lib:
@@ -91,6 +91,7 @@ class Estimator():
         self.get_file_data()
         if self.pmt_sep == 0: self.pmt_sep = self.calculate_pmt_separation()
 
+        print("\n\nParameters are:\n RAT Input File = %s\n Vertex Reconstruction File = %s\n minT = %f ns\n maxT = %f ns\n Window = %f ns\n Medium = %s\n Medium Transparency (Absorption length) = %f mm\n Dark Noise = %f Hz\n Quantum Efficiency = %f\n PMT Separation = %f mm\n Fitter = %s\n\n" % (self.rat_fn,self.bonsai_fn,self.min_t,self.max_t,self.window,self.medium,self.transparency,self.dark_noise,self.qe,self.pmt_sep,self.fitter))
     def get_file_data(self):
         self.rat_t = self.rat_file.Get("T")
         self.rat_rt = self.rat_file.Get("runT")
@@ -117,7 +118,7 @@ class Estimator():
         print(f"Setting PMT separation to {pmt_separation + buffer}.")
         return pmt_separation + buffer
 
-    def eventloop(self, write_tree=True)
+    def eventloop(self, write_tree=True):
         r_nentry = self.rat_t.GetEntries()
         b_nentry = self.bonsai_t.GetEntries()
         geo_data = self.parse_geometric_corrections("geo_correction.csv")
@@ -137,6 +138,8 @@ class Estimator():
                 assert b_event.mcx == self.rat_t.ds.GetMC().GetMCParticle(0).GetPosition().X()
                 if self.fitter == 'qfit':
                     reco_vertex = np.array([b_event.xQFit, b_event.yQFit, b_event.zQFit])
+                elif self.fitter == 'MC':
+                    reco_vertex = np.array([b_event.mcx, b_event.mcy, b_event.mcz])
                 else:
                     reco_vertex = np.array([b_event.x, b_event.y, b_event.z])
                 if np.any(reco_vertex < -9998):
